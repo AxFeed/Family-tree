@@ -1,0 +1,358 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "BobFamily API",
+    "description": "API de gestion d'un arbre généalogique",
+    "version": "1.0.0"
+  },
+  "host": "localhost:8000",
+  "basePath": "/",
+  "schemes": ["http"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+
+  "definitions": {
+    "PrenomRead": {
+      "type": "object",
+      "properties": {
+        "id":     { "type": "integer" },
+        "prenom": { "type": "string" }
+      },
+      "required": ["id", "prenom"]
+    },
+    "PrenomCreate": {
+      "type": "object",
+      "properties": {
+        "prenom": { "type": "string" }
+      },
+      "required": ["prenom"]
+    },
+    "NomRead": {
+      "type": "object",
+      "properties": {
+        "id":  { "type": "integer" },
+        "nom": { "type": "string" }
+      },
+      "required": ["id", "nom"]
+    },
+    "NomCreate": {
+      "type": "object",
+      "properties": {
+        "nom": { "type": "string" }
+      },
+      "required": ["nom"]
+    },
+    "LienParenteRead": {
+      "type": "object",
+      "properties": {
+        "id":        { "type": "integer" },
+        "id_enfant": { "type": "integer" },
+        "id_parent": { "type": "integer" },
+        "type_lien": { "type": "string", "enum": ["BIOLOGIQUE", "ADOPTIF", "BEAU_PARENT"] }
+      },
+      "required": ["id", "id_enfant", "id_parent", "type_lien"]
+    },
+    "LienParenteCreate": {
+      "type": "object",
+      "properties": {
+        "id_parent": { "type": "integer" },
+        "type_lien": { "type": "string", "enum": ["BIOLOGIQUE", "ADOPTIF", "BEAU_PARENT"], "default": "BIOLOGIQUE" }
+      },
+      "required": ["id_parent"]
+    },
+    "PersonneRead": {
+      "type": "object",
+      "properties": {
+        "id":             { "type": "integer" },
+        "date_naissance": { "type": "string", "format": "date", "x-nullable": true },
+        "date_mort":      { "type": "string", "format": "date", "x-nullable": true },
+        "prenoms":        { "type": "array", "items": { "$ref": "#/definitions/PrenomRead" } },
+        "noms":           { "type": "array", "items": { "$ref": "#/definitions/NomRead" } },
+        "parents":        { "type": "array", "items": { "$ref": "#/definitions/LienParenteRead" } },
+        "enfants":        { "type": "array", "items": { "$ref": "#/definitions/LienParenteRead" } }
+      },
+      "required": ["id"]
+    },
+    "PersonneCreate": {
+      "type": "object",
+      "properties": {
+        "prenoms":        { "type": "array", "items": { "type": "string" }, "default": [] },
+        "noms":           { "type": "array", "items": { "type": "string" }, "default": [] },
+        "date_naissance": { "type": "string", "format": "date", "x-nullable": true },
+        "date_mort":      { "type": "string", "format": "date", "x-nullable": true },
+        "parents":        { "type": "array", "items": { "$ref": "#/definitions/LienParenteCreate" }, "default": [] }
+      }
+    },
+    "PersonneUpdate": {
+      "type": "object",
+      "properties": {
+        "prenoms":        { "type": "array", "items": { "type": "string" }, "x-nullable": true },
+        "noms":           { "type": "array", "items": { "type": "string" }, "x-nullable": true },
+        "date_naissance": { "type": "string", "format": "date", "x-nullable": true },
+        "date_mort":      { "type": "string", "format": "date", "x-nullable": true }
+      }
+    },
+    "CoupleRead": {
+      "type": "object",
+      "properties": {
+        "id":           { "type": "integer" },
+        "id_personne_1": { "type": "integer" },
+        "id_personne_2": { "type": "integer" }
+      },
+      "required": ["id", "id_personne_1", "id_personne_2"]
+    },
+    "CoupleCreate": {
+      "type": "object",
+      "properties": {
+        "id_personne_1": { "type": "integer" },
+        "id_personne_2": { "type": "integer" }
+      },
+      "required": ["id_personne_1", "id_personne_2"]
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "detail": { "type": "string" }
+      }
+    }
+  },
+
+  "paths": {
+
+    "/personnes/": {
+      "get": {
+        "summary": "Lister toutes les personnes",
+        "operationId": "lister_personnes",
+        "tags": ["Personnes"],
+        "responses": {
+          "200": {
+            "description": "Liste des personnes",
+            "schema": { "type": "array", "items": { "$ref": "#/definitions/PersonneRead" } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Créer une ou plusieurs personnes",
+        "operationId": "creer_personne",
+        "tags": ["Personnes"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": { "type": "array", "items": { "$ref": "#/definitions/PersonneCreate" } }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Personnes créées",
+            "schema": { "type": "array", "items": { "$ref": "#/definitions/PersonneRead" } }
+          },
+          "422": { "description": "Contrainte métier violée", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/personnes/{id_personne}": {
+      "get": {
+        "summary": "Lire une personne",
+        "operationId": "lire_personne",
+        "tags": ["Personnes"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" }
+        ],
+        "responses": {
+          "200": { "description": "Personne trouvée", "schema": { "$ref": "#/definitions/PersonneRead" } },
+          "404": { "description": "Personne introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      },
+      "patch": {
+        "summary": "Modifier une personne",
+        "operationId": "modifier_personne",
+        "tags": ["Personnes"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" },
+          { "in": "body", "name": "body", "required": true, "schema": { "$ref": "#/definitions/PersonneUpdate" } }
+        ],
+        "responses": {
+          "200": { "description": "Personne modifiée", "schema": { "$ref": "#/definitions/PersonneRead" } },
+          "404": { "description": "Personne introuvable", "schema": { "$ref": "#/definitions/Error" } },
+          "422": { "description": "Contrainte métier violée", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      },
+      "delete": {
+        "summary": "Supprimer une personne",
+        "operationId": "supprimer_personne",
+        "tags": ["Personnes"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" }
+        ],
+        "responses": {
+          "204": { "description": "Personne supprimée" },
+          "404": { "description": "Personne introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/personnes/{id_personne}/prenoms": {
+      "post": {
+        "summary": "Ajouter un prénom à une personne",
+        "operationId": "ajouter_prenom",
+        "tags": ["Prénoms"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" },
+          { "in": "body", "name": "body", "required": true, "schema": { "$ref": "#/definitions/PrenomCreate" } }
+        ],
+        "responses": {
+          "201": { "description": "Prénom ajouté", "schema": { "$ref": "#/definitions/PersonneRead" } },
+          "404": { "description": "Personne introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/personnes/{id_personne}/prenoms/{prenom}": {
+      "delete": {
+        "summary": "Supprimer un prénom d'une personne",
+        "operationId": "supprimer_prenom",
+        "tags": ["Prénoms"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" },
+          { "in": "path", "name": "prenom", "required": true, "type": "string" }
+        ],
+        "responses": {
+          "204": { "description": "Prénom supprimé" },
+          "404": { "description": "Prénom ou personne introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/personnes/{id_personne}/noms": {
+      "post": {
+        "summary": "Ajouter un nom de famille à une personne",
+        "operationId": "ajouter_nom",
+        "tags": ["Noms"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" },
+          { "in": "body", "name": "body", "required": true, "schema": { "$ref": "#/definitions/NomCreate" } }
+        ],
+        "responses": {
+          "201": { "description": "Nom ajouté", "schema": { "$ref": "#/definitions/PersonneRead" } },
+          "404": { "description": "Personne introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/personnes/{id_personne}/noms/{nom}": {
+      "delete": {
+        "summary": "Supprimer un nom de famille d'une personne",
+        "operationId": "supprimer_nom",
+        "tags": ["Noms"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" },
+          { "in": "path", "name": "nom", "required": true, "type": "string" }
+        ],
+        "responses": {
+          "204": { "description": "Nom supprimé" },
+          "404": { "description": "Nom ou personne introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/personnes/{id_personne}/parents": {
+      "post": {
+        "summary": "Ajouter un ou plusieurs parents à une personne",
+        "operationId": "ajouter_parent",
+        "tags": ["Liens de parenté"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": { "type": "array", "items": { "$ref": "#/definitions/LienParenteCreate" } }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Liens créés",
+            "schema": { "type": "array", "items": { "$ref": "#/definitions/LienParenteRead" } }
+          },
+          "404": { "description": "Personne introuvable", "schema": { "$ref": "#/definitions/Error" } },
+          "409": { "description": "Lien déjà existant", "schema": { "$ref": "#/definitions/Error" } },
+          "422": { "description": "Contrainte métier violée", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/personnes/{id_personne}/parents/{id_parent}": {
+      "delete": {
+        "summary": "Supprimer un lien de parenté",
+        "operationId": "supprimer_lien_parent",
+        "tags": ["Liens de parenté"],
+        "parameters": [
+          { "in": "path", "name": "id_personne", "required": true, "type": "integer" },
+          { "in": "path", "name": "id_parent", "required": true, "type": "integer" },
+          { "in": "query", "name": "type_lien", "required": false, "type": "string", "enum": ["BIOLOGIQUE", "ADOPTIF", "BEAU_PARENT"], "default": "BIOLOGIQUE" }
+        ],
+        "responses": {
+          "204": { "description": "Lien supprimé" },
+          "404": { "description": "Lien introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/couples/": {
+      "get": {
+        "summary": "Lister tous les couples",
+        "operationId": "lister_couples",
+        "tags": ["Couples"],
+        "responses": {
+          "200": {
+            "description": "Liste des couples",
+            "schema": { "type": "array", "items": { "$ref": "#/definitions/CoupleRead" } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Créer un couple",
+        "operationId": "creer_couple",
+        "tags": ["Couples"],
+        "parameters": [
+          { "in": "body", "name": "body", "required": true, "schema": { "$ref": "#/definitions/CoupleCreate" } }
+        ],
+        "responses": {
+          "201": { "description": "Couple créé", "schema": { "$ref": "#/definitions/CoupleRead" } },
+          "409": { "description": "Couple déjà existant", "schema": { "$ref": "#/definitions/Error" } },
+          "422": { "description": "Contrainte métier violée", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    },
+
+    "/couples/{id_couple}": {
+      "get": {
+        "summary": "Lire un couple",
+        "operationId": "lire_couple",
+        "tags": ["Couples"],
+        "parameters": [
+          { "in": "path", "name": "id_couple", "required": true, "type": "integer" }
+        ],
+        "responses": {
+          "200": { "description": "Couple trouvé", "schema": { "$ref": "#/definitions/CoupleRead" } },
+          "404": { "description": "Couple introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      },
+      "delete": {
+        "summary": "Supprimer un couple",
+        "operationId": "supprimer_couple",
+        "tags": ["Couples"],
+        "parameters": [
+          { "in": "path", "name": "id_couple", "required": true, "type": "integer" }
+        ],
+        "responses": {
+          "204": { "description": "Couple supprimé" },
+          "404": { "description": "Couple introuvable", "schema": { "$ref": "#/definitions/Error" } }
+        }
+      }
+    }
+  }
+}
